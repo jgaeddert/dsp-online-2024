@@ -7,10 +7,10 @@ import matplotlib.pyplot as plt
 
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('-output',  default=None,          help='save output file instead of plotting')
+p.add_argument('-P',       default=8, type=int,   help='number of partitions')
 p.add_argument('-plotcomp',action='store_true',   help='enable plotting composite sequence')
 p.add_argument('-plotsyms',action='store_true',   help='enable plotting symbols')
 p.add_argument('-plotimag',action='store_true',   help='enable plotting imaginary component')
-p.add_argument('-nstd',    default=0, type=float, help='noise standard deviation')
 p.add_argument('-fc',      default=0, type=float, help='noise standard deviation')
 p.add_argument('-fcapprox',action='store_true',   help='enable setting approximate fc offset for each partition')
 p.add_argument('-plotcos', action='store_true',   help='enable plotting cosine of carrier offset')
@@ -22,8 +22,10 @@ modmap = np.array((1,-1))
 rng    = np.random.default_rng(12345)
 
 # design interpolator from prototype
-M, m, As, L, P = 8, 5, 60., 15, 8
-num_symbols = L * P
+M, m, As, num_symbols, P = 8, 5, 60., 120, args.P
+L = num_symbols // P
+if num_symbols != L*P:
+    raise BaseException(f'number of partitions must evenly divide number of symbols ({num_symbols})')
 interp = dsp.firinterp(M, m, As)
 
 # time vector
