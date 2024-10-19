@@ -1,0 +1,3 @@
+liquid-dsp==1.6.0
+matplotlib
+numpy<2.0.0
