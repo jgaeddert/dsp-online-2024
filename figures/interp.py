@@ -10,6 +10,7 @@ p.add_argument('-output',  default=None,          help='save output file instead
 p.add_argument('-plotsyms',action='store_true',   help='enable plotting symbols')
 p.add_argument('-nstd',    default=0, type=float, help='noise standard deviation')
 p.add_argument('-fc',      default=0, type=float, help='noise standard deviation')
+p.add_argument('-plotcos', action='store_true',   help='enable plotting cosine of carrier offset')
 args = p.parse_args()
 
 # initialization
@@ -30,7 +31,8 @@ num_samples = (num_symbols+2*m)*M
 t0 = np.arange(num_symbols)
 t1 = np.arange(num_samples)/M - m
 
-samples *= np.exp(2j*np.pi*args.fc*t1)
+phasor = np.exp(2j*np.pi*args.fc*t1)
+samples *= phasor
 
 noise = rng.normal(0,args.nstd,2*num_samples).astype(np.single).view(np.csingle)
 samples += noise
@@ -47,6 +49,9 @@ ax.set(xlim=(-m,num_symbols+m),ylim=(-1.80,1.80))
 
 if args.plotsyms:
     ax.plot(t0, np.real(symbols), 'o', markersize=3, color='black')
+
+if args.plotcos:
+    ax.plot(t1, np.real(phasor), ':', linewidth=0.5, color='black')
 
 if args.output is not None:
     fig.savefig(args.output, dpi=200, bbox_inches='tight')
