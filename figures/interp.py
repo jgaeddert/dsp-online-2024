@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-
 import liquid as dsp
 import numpy as np
 import matplotlib.pyplot as plt
 
 # initialization
+plt.style.use('seaborn-v0_8-darkgrid')
 modmap = np.array((1+1j,1-1j,-1+1j,-1-1j))
 rng    = np.random.default_rng(12345)
 
@@ -21,7 +21,7 @@ t0 = np.arange(num_symbols)
 t1 = np.arange((num_symbols+2*m)*M)/M - m
 
 # plot impulse and spectral responses
-fig, (axi, axq) = plt.subplots(2,figsize=(8,8))
+fig, (axi, axq) = plt.subplots(2,figsize=(12,8))
 for ax,func,label in ((axi,np.real,'Real'),(axq,np.imag,'Imag')):
     ax.plot(t1, func(samples))
     ax.plot(t0, func(symbols), 'o')
@@ -29,6 +29,7 @@ for ax,func,label in ((axi,np.real,'Real'),(axq,np.imag,'Imag')):
     ax.set_ylabel(label)
     ax.grid(True, zorder=5)
 
-plt.show()
+fig.savefig("interp.png", dpi=200, bbox_inches='tight')
 
+#plt.show()
 
