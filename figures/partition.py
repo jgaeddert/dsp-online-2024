@@ -12,6 +12,7 @@ p.add_argument('-plotsyms',action='store_true',   help='enable plotting symbols'
 p.add_argument('-plotimag',action='store_true',   help='enable plotting imaginary component')
 p.add_argument('-nstd',    default=0, type=float, help='noise standard deviation')
 p.add_argument('-fc',      default=0, type=float, help='noise standard deviation')
+p.add_argument('-fcapprox',action='store_true',   help='enable setting approximate fc offset for each partition')
 p.add_argument('-plotcos', action='store_true',   help='enable plotting cosine of carrier offset')
 args = p.parse_args()
 
@@ -47,7 +48,7 @@ phasor = np.exp(2j*np.pi*args.fc*t1)
 for p in range(P):
     idx = p*L*M
     num = (L+2*m)*M
-    sample_partitions[p,:] *= phasor[idx:(idx+num)]
+    sample_partitions[p,:] *= phasor[idx+num//2] if args.fcapprox else phasor[idx:(idx+num)]
 
 # plot impulse and spectral responses
 fig, ax = plt.subplots(1,figsize=(12,4))

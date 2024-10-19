@@ -15,6 +15,7 @@ figures :=			\
 	partition.png		\
 	partition_comp.png	\
 	partition_rot_1.png	\
+	partition_rot_2.png	\
 
 interp.png          : figures/interp.py    ; ./$< -o $@ -plotsyms
 interp_clean.png    : figures/interp.py    ; ./$< -o $@
@@ -29,6 +30,7 @@ interp_rot_5.png    : figures/interp.py    ; ./$< -o $@ -plotcos -fc 0.02
 partition.png       : figures/partition.py ; ./$< -o $@
 partition_comp.png  : figures/partition.py ; ./$< -o $@ -plotcomp
 partition_rot_1.png : figures/partition.py ; ./$< -o $@ -plotimag -plotcos -fc 0.0083333
+partition_rot_2.png : figures/partition.py ; ./$< -o $@ -plotimag -plotcos -fc 0.0083333 -fcapprox
 
 
 all: ${figures}
