@@ -94,20 +94,22 @@ if args.plotcos:
 
 if args.plotcor:
     '''plot cross correlation vs. time lag'''
-    txy = np.arange(num_samples)/M - m
-    rxy = np.empty((P,num_samples),dtype=np.csingle)
+    nfft= max(2*L*M, (L+2*m)*M)
+    txy = np.arange(nfft)/M - m
+    rxy = np.empty((P,nfft),dtype=np.csingle)
     for p in range(P):
         partition = signal_partitions[p,:]
-        rxy[p,:] = np.fft.ifft(np.fft.fft(samples) * np.conj(np.fft.fft(partition,num_samples)))
+        idx       = p*L*M
+        rx        = samples.take(range(idx,idx+nfft), mode='wrap')
+        rxy[p,:]  = np.fft.ifft(np.fft.fft(rx) * np.conj(np.fft.fft(partition,nfft)))
         #print('rxy',max(abs(rxy)),'n',len(samples), 'E{s^2}', np.sum(np.abs(signal)**2),)
         rxy[p,:] /= np.sum(np.abs(partition)**2)
         rxy[p,:] = np.roll(rxy[p,:], m*M)
-        ax2.plot(txy, np.real(rxy[p,:]))
+        ax2.plot(txy + p*L, np.real(rxy[p,:]))
     ax2.set_prop_cycle(None) # reset color cycler
     for p in range(P):
-        ax2.plot(txy, np.imag(rxy[p,:]),'-', linewidth=0.7)
-    for p in range(P):
-        ax2.plot(txy, np.abs(rxy[p,:]), ':', linewidth=0.5, color='black')
+        ax2.plot(txy + p*L, np.imag(rxy[p,:]),'-', linewidth=0.7)
+        ax2.plot(txy + p*L, np.abs(rxy[p,:]), ':', linewidth=0.5, color='black')
     ax2.set_xlabel('Lag [symbols]')
     ax2.set_ylabel('Cross Correlation')
     ax2.set(xlim=(-m,num_symbols+m),ylim=(-1.1,1.1))
