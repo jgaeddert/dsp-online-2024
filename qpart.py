@@ -58,19 +58,38 @@ class qpart:
         '''get the expected number of input samples'''
         return self.L * self.M
 
+    def plot_partitions(self,):
+        '''plot partitions'''
+        fig, ax = plt.subplots(1,figsize=(12,4))
+        tp = np.arange( (self.L+2*self.m)*self.M )/self.M - self.m
+        for p in range(self.partitions):
+            ax.plot(tp + p*self.L, np.real(self.signal_partitions[p,:]))
+        plt.show()
+
     def execute(self, buf: np.ndarray):
         '''push block of samples'''
         # validate input
         if buf.shape != (self.input_len,):
             raise BaseException(f'expected input shape to be ({self.input_len},)')
-        # shift samples in
+        # shift transform buffers down
+        self.B = np.roll(self.B, -1, axis=0)
+        # shift samples into time-domain buffer
         self.buf = np.concatenate((self.buf[-self.input_len:], buf))
+        # compute transform of input buffer and append to end of frequency buffer
+        self.B[-1,:] = np.fft.fft(self.buf, self.nfft_0)
+        # compute partitioned...
+        rxy = np.fft.ifft(self.B * np.conj(self.R), axis=0)
+        print(rxy.shape)
+        tmp = np.mean( np.abs(rxy), axis=1 )
+        print(tmp.shape)
+        #print(np.abs(rxy))
+        return np.max(tmp)
 
 if __name__=='__main__':
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('-output',  default=None,          help='save output file instead of plotting')
-    p.add_argument('-N',       default=240, type=int, help='number of symbols')
-    p.add_argument('-P',       default=15,  type=int, help='number of partitions')
+    p.add_argument('-N',       default=120, type=int, help='number of symbols')
+    p.add_argument('-P',       default=10,  type=int, help='number of partitions')
     p.add_argument('-plotcomp',action='store_true',   help='enable plotting composite sequence')
     p.add_argument('-plotsyms',action='store_true',   help='enable plotting symbols')
     p.add_argument('-plotimag',action='store_true',   help='enable plotting imaginary component')
@@ -83,12 +102,19 @@ if __name__=='__main__':
     # create detector object
     det = qpart(num_symbols=args.N, partitions=args.P)
     print(det)
+    det.plot_partitions()
 
     # get clean signal and apply offsets
     s = det.sequence
+    # extend length
+    s = np.concatenate((s,np.zeros(100,dtype=np.csingle)))
     n = len(s)
     s *= np.exp(0)
 
     # operate in blocks...
-    det.execute(np.zeros((det.input_len,)))
+    num_blocks = len(s) // det.input_len
+    print('len(s)',len(s), 'input_len', det.input_len, 'num_blocks', num_blocks)
+    for i in range(num_blocks):
+        rxy_max = det.execute(s[i:(i+det.input_len)])
+        print(i, rxy_max)
 
