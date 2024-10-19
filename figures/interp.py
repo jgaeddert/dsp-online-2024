@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('-output',  default=None,          help='save output file instead of plotting')
+p.add_argument('-N',       default=240, type=int, help='number of symbols')
 p.add_argument('-plotsyms',action='store_true',   help='enable plotting symbols')
 p.add_argument('-nstd',    default=0, type=float, help='noise standard deviation')
 p.add_argument('-fc',      default=0, type=float, help='noise standard deviation')
@@ -20,7 +21,7 @@ modmap = np.array((1,-1))
 rng    = np.random.default_rng(12345)
 
 # design interpolator from prototype
-M, m, As, num_symbols = 8, 5, 60., 120
+M, m, As, num_symbols = 8, 5, 60., args.N
 interp = dsp.firinterp(M, m, As)
 
 # generate random symbols and interpolate
@@ -64,6 +65,7 @@ if args.plotcor:
     rxy /= np.sum(np.abs(signal)**2)
     txy = np.arange(num_samples)/M - m - num_symbols/2
     ax2.plot(txy, np.real(rxy), txy, np.imag(rxy))
+    ax2.plot(txy, np.abs(rxy), ':', linewidth=0.5, color='black')
     ax2.set_xlabel('Lag [symbols]')
     ax2.set_ylabel('Cross Correlation')
     ax2.set(xlim=(-num_symbols/2-m,num_symbols/2+m),ylim=(-1.1,1.1))
