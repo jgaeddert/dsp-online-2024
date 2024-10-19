@@ -18,7 +18,7 @@ modmap = np.array((1,-1))
 rng    = np.random.default_rng(12345)
 
 # design interpolator from prototype
-M, m, As, num_symbols = 4, 6, 60., 120
+M, m, As, num_symbols = 8, 10, 60., 120
 interp = dsp.firinterp(M, m, As)
 
 # generate random symbols and interpolate
@@ -40,12 +40,13 @@ fig, ax = plt.subplots(1,figsize=(12,4))
 ax.plot(t1, np.real(samples))
 if not args.plotsyms:
     ax.plot(t1, np.imag(samples))
-ax.set_xlabel('Time [samples]')
+ax.set_xlabel('Time [symbols]')
 ax.set_ylabel('Signal')
 ax.grid(True, zorder=5)
+ax.set(xlim=(-m,num_symbols+m),ylim=(-1.80,1.80))
 
 if args.plotsyms:
-    ax.plot(t0, np.real(symbols), 'o')
+    ax.plot(t0, np.real(symbols), 'o', markersize=3, color='black')
 
 if args.output is not None:
     fig.savefig(args.output, dpi=200, bbox_inches='tight')
