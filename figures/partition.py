@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-'''script to generate interpolation figures'''
+'''script to generate partitioned figures'''
 import argparse
 import liquid as dsp
 import numpy as np
@@ -19,39 +19,31 @@ modmap = np.array((1,-1))
 rng    = np.random.default_rng(12345)
 
 # design interpolator from prototype
-M, m, As, num_symbols = 8, 10, 60., 120
+M, m, As, L, P = 8, 10, 60., 15, 8
+num_symbols = L * P
 interp = dsp.firinterp(M, m, As)
 
 # generate random symbols and interpolate
 symbols = rng.choice(modmap,num_symbols).astype(np.csingle)
-samples = interp.execute(np.concatenate((symbols,np.zeros(2*m))))
 
-num_samples = (num_symbols+2*m)*M
+# group symbols into discrete partitions
+symbol_partitions = symbols.reshape((P,L))
 
-t0 = np.arange(num_symbols)
-t1 = np.arange(num_samples)/M - m
+# interpolate each partition
+sample_partitions = np.empty((P,(L+2*m)*M), dtype=np.csingle )
+for p in range(P):
+    interp.reset()
+    sample_partitions[p,:] = interp.execute(np.concatenate((symbol_partitions[p,:],np.zeros(2*m))))
 
-phasor = np.exp(2j*np.pi*args.fc*t1)
-samples *= phasor
-
-noise = rng.normal(0,args.nstd,2*num_samples).astype(np.single).view(np.csingle)
-samples += noise
-
-# plot time series
+# plot impulse and spectral responses
 fig, ax = plt.subplots(1,figsize=(12,4))
-ax.plot(t1, np.real(samples))
-if not args.plotsyms:
-    ax.plot(t1, np.imag(samples))
+for p in range(P):
+    tp = np.arange( (L+2*m)*M )/M - m + p*L
+    ax.plot(tp, np.real(sample_partitions[p,:]))
 ax.set_xlabel('Time [symbols]')
 ax.set_ylabel('Signal')
 ax.grid(True, zorder=5)
 ax.set(xlim=(-m,num_symbols+m),ylim=(-1.80,1.80))
-
-if args.plotsyms:
-    ax.plot(t0, np.real(symbols), 'o', markersize=3, color='black')
-
-if args.plotcos:
-    ax.plot(t1, np.real(phasor), ':', linewidth=0.5, color='black')
 
 if args.output is not None:
     fig.savefig(args.output, dpi=200, bbox_inches='tight')
