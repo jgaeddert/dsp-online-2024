@@ -19,7 +19,7 @@ modmap = np.array((1,-1))
 rng    = np.random.default_rng(12345)
 
 # design interpolator from prototype
-M, m, As, num_symbols = 8, 10, 60., 120
+M, m, As, num_symbols = 8, 5, 60., 120
 interp = dsp.firinterp(M, m, As)
 
 # generate random symbols and interpolate

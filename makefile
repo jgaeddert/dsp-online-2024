@@ -28,7 +28,7 @@ interp_rot_5.png    : figures/interp.py    ; ./$< -o $@ -plotcos -fc 0.02
 
 partition.png       : figures/partition.py ; ./$< -o $@
 partition_comp.png  : figures/partition.py ; ./$< -o $@ -plotcomp
-partition_rot_1.png : figures/partition.py ; ./$< -o $@ -plotcos -fc 0.0005
+partition_rot_1.png : figures/partition.py ; ./$< -o $@ -plotimag -plotcos -fc 0.0083333
 
 
 all: ${figures}
