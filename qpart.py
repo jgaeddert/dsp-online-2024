@@ -14,6 +14,8 @@ class qpart:
         self.M = interp
         self.m = m
         self.L = self.num_symbols // self.partitions # symbols per partition
+        if self.L * self.partitions != self.num_symbols:
+            raise BaseException(f'number of partitions must evenly divide number of symbols ({self.num_symbols})')
 
         # generate sequence
         modmap = np.array((1,-1))
@@ -50,8 +52,11 @@ class qpart:
         self.rxy = np.zeros((self.partitions,self.nfft_0), dtype=np.csingle)
 
         # grid
-        self.nfft_1 = 2*self.partitions
+        #self.nfft_1 = 2*self.partitions
+        self.nfft_1 = self.nfft_0 + 2
         self.grid = np.zeros((self.nfft_1, self.nfft_0), dtype=np.csingle)
+        self.lag  = (np.arange(self.nfft_0) - self.nfft_0/2)/self.M # time offsets
+        self.df   = (np.arange(self.nfft_1) - self.nfft_1/2)/(self.L) # frequency offsets
 
     def __repr__(self,):
         '''object representation'''
@@ -66,6 +71,24 @@ class qpart:
     def input_len(self,):
         '''get the expected number of input samples'''
         return self.L * self.M
+
+    def execute(self, buf: np.ndarray):
+        '''push block of samples and process'''
+        # validate input
+        if buf.shape != (self.input_len,):
+            raise BaseException(f'expected input shape to be ({self.input_len},)')
+        # shift transform buffers down
+        self.B = np.roll(self.B, -1, axis=0)
+        # shift samples into time-domain buffer
+        self.buf = np.concatenate((self.buf[-self.input_len:], buf))
+        # compute transform of input buffer and append to end of frequency buffer
+        self.B[-1,:] = np.fft.fft(self.buf, self.nfft_0)
+        # compute partitioned correlation output
+        self.rxy = np.fft.ifft(self.B * np.conj(self.R), axis=1)
+        # compute grid as transforms across time (scaled)
+        self.grid = np.fft.fft(self.rxy, self.nfft_1, axis=0) / self.partitions
+        # scale 
+        return 0
 
     def plot_partitions(self,output=None):
         '''plot partitions'''
@@ -111,26 +134,25 @@ class qpart:
         else:
             plt.show()
 
-    def plot_grid(self,):
+    def plot_grid(self,output=None):
         '''plot full grid'''
-        plot_box(v=self.grid/np.max(np.abs(self.grid)), labels=False)
-
-    def execute(self, buf: np.ndarray):
-        '''push block of samples'''
-        # validate input
-        if buf.shape != (self.input_len,):
-            raise BaseException(f'expected input shape to be ({self.input_len},)')
-        # shift transform buffers down
-        self.B = np.roll(self.B, -1, axis=0)
-        # shift samples into time-domain buffer
-        self.buf = np.concatenate((self.buf[-self.input_len:], buf))
-        # compute transform of input buffer and append to end of frequency buffer
-        self.B[-1,:] = np.fft.fft(self.buf, self.nfft_0)
-        # compute partitioned correlation output
-        self.rxy = np.fft.ifft(self.B * np.conj(self.R), axis=1)
-        #print('rxy',rxy.shape)
-        self.grid = np.fft.fft(self.rxy, self.nfft_1, axis=0)
-        return 0
+        fig,ax = plt.subplots(1,figsize=(8,8))
+        grid= np.fft.fftshift(np.abs(self.grid))
+        row,col = np.unravel_index(np.argmax(grid,axis=None), grid.shape)
+        print('max grid', np.max(grid))
+        my_cmap = plt.get_cmap('summer')
+        #my_cmap.set_under('black')
+        ax.pcolormesh(self.lag,self.df,np.abs(grid),shading='auto',vmin=0,vmax=1,cmap=my_cmap)
+        ax.set_xlabel('Lag [symbols]')
+        ax.set_ylabel('Frequency Offset')
+        ax.grid(True, which='minor')
+        # TODO: adjust plot values
+        # add marker for maximum
+        ax.plot(self.lag[col], self.df[row], '.', color='black')
+        if output is not None:
+            fig.savefig(output, dpi=200, bbox_inches='tight')
+        else:
+            plt.show()
 
 def plot_box(v:np.ndarray, x=None, y=None, output=None, labels=True,
              marker=lambda x: np.abs(x)>0.9):
@@ -169,27 +191,29 @@ if __name__=='__main__':
     p.add_argument('-N',       default=240, type=int, help='number of symbols')
     p.add_argument('-P',       default=8,   type=int, help='number of partitions')
     p.add_argument('-interp',  default=2,   type=int, help='interpolation rate')
-    p.add_argument('-plotcomp',action='store_true',   help='enable plotting composite sequence')
-    p.add_argument('-plotsyms',action='store_true',   help='enable plotting symbols')
-    p.add_argument('-plotimag',action='store_true',   help='enable plotting imaginary component')
-    p.add_argument('-fc',      default=0, type=float, help='noise standard deviation')
-    p.add_argument('-fcapprox',action='store_true',   help='enable setting approximate fc offset for each partition')
-    p.add_argument('-plotcos', action='store_true',   help='enable plotting cosine of carrier offset')
-    p.add_argument('-plotcor', action='store_true',   help='enable plotting cross-correlation')
+    p.add_argument('-dt',      default=0,   type=int, help='timing offset [samples]')
+    p.add_argument('-fc',      default=0, type=float, help='carrier offset [f/Fs]')
     args = p.parse_args()
+
+    # set plot style
     plt.style.use('seaborn-v0_8-darkgrid')
 
     # create detector object
     det = qpart(num_symbols=args.N, partitions=args.P, interp=args.interp)
     print(det)
-    det.plot_partitions()
+    #det.plot_partitions()
 
     # get clean signal and apply offsets
     s = det.sequence
     # extend length
     s = np.concatenate((s,np.zeros(300,dtype=np.csingle)))
     n = len(s)
-    s *= np.exp(0)
+
+    # add time delay
+    s = np.roll(s, args.dt)
+
+    # add carrier offset
+    s *= np.exp(2j*np.pi*args.fc*np.arange(n))
 
     #s = np.arange(n)
 
@@ -198,8 +222,8 @@ if __name__=='__main__':
     print('len(s)',len(s), 'input_len', det.input_len, 'num_blocks', num_blocks)
     for i in range(num_blocks):
         num = det.input_len
-        print(i)
         rxy_max = det.execute(s[(i*num):((i+1)*det.input_len)])
         if i==args.P:
             det.plot_rxy()
+            det.plot_grid() #'grid.png')
 
