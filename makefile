@@ -23,6 +23,9 @@ figures :=			\
 	partition_rot_3.png	\
 	partition_rot_4.png	\
 	partition_rot_5.png	\
+	qpart_0.png		\
+	qpart_1.png		\
+	qpart_2.png		\
 
 interp.png          : figures/interp.py    ; ./$< -o $@ -plotsyms
 interp_clean.png    : figures/interp.py    ; ./$< -o $@
@@ -45,6 +48,10 @@ partition_rot_2.png : figures/partition.py ; ./$< -o $@ -plotimag -plotcos -plot
 partition_rot_3.png : figures/partition.py ; ./$< -o $@ -plotimag -plotcos -plotcor -fc 0.00416667
 partition_rot_4.png : figures/partition.py ; ./$< -o $@ -plotimag -plotcos -plotcor -fc 0.00833333
 partition_rot_5.png : figures/partition.py ; ./$< -o $@ -plotimag -plotcos -plotcor -fc 0.02
+
+qpart_0.png : %.png : plot_qpart.py qpart.py ; ./$< -o $*
+qpart_1.png : %.png : plot_qpart.py qpart.py ; ./$< -o $* -fc 0.0005
+qpart_2.png : %.png : plot_qpart.py qpart.py ; ./$< -o $* -fc 0.0005 -dt 17
 
 all: ${figures}
 
