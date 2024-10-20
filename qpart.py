@@ -134,6 +134,28 @@ class qpart:
         else:
             plt.show()
 
+    def plot_rxy_stacked(self,output=None):
+        '''plot correlation output with stacked figures'''
+        fig, ax = plt.subplots(self.partitions,figsize=(12,12))
+        txy = np.arange(self.nfft_0)/self.M - self.m
+        # plot each partition
+        for p in range(self.partitions):
+            for _ in range(p+1): # get appropriate color for plot
+                c = ax[p]._get_lines.get_next_color()
+            r = np.roll(self.rxy[p,:],self.m * self.M)
+            ax[p].plot(txy, np.real(r), '-', color=c)
+            ax[p].plot(txy, np.imag(r), '-', color=c, linewidth=0.5)
+            ax[p].set(xlim=(-self.m,self.L+self.m),ylim=(-1,1))
+            ax[p].set_ylabel(f'Correlation ({p})')
+            ax[p].set_yticks((-1,-.5,0,.5,1))
+        # set figure properties
+        ax[-1].set_xlabel('Lag [symbols]')
+        #ax[-1].set_xticks(np.arange(self.L+2*self.m+1)-self.m)
+        if output is not None:
+            fig.savefig(output, dpi=200, bbox_inches='tight')
+        else:
+            plt.show()
+
     def plot_grid(self,output=None):
         '''plot full grid'''
         fig,ax = plt.subplots(1,figsize=(8,8))
@@ -175,7 +197,7 @@ if __name__=='__main__':
     # get clean signal and apply offsets
     s = det.sequence
     # extend length
-    s = np.concatenate((s,np.zeros(300,dtype=np.csingle)))
+    s = np.concatenate((s,np.zeros(700,dtype=np.csingle)))
     n = len(s)
 
     # add time delay
@@ -192,7 +214,8 @@ if __name__=='__main__':
     for i in range(num_blocks):
         num = det.input_len
         rxy_max = det.execute(s[(i*num):((i+1)*det.input_len)])
+        print(i)
         if i==args.P:
-            det.plot_rxy()
+            det.plot_rxy_stacked()
             det.plot_grid() #'grid.png')
 
