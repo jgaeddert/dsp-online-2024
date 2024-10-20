@@ -53,10 +53,15 @@ class qpart:
 
         # grid
         #self.nfft_1 = 2*self.partitions
-        self.nfft_1 = self.nfft_0 + 2
+        self.nfft_1 = self.nfft_0 + 2 # artifically increase transform size for better grid
         self.grid = np.zeros((self.nfft_1, self.nfft_0), dtype=np.csingle)
         self.lag  = (np.arange(self.nfft_0) - self.nfft_0/2)/self.M # time offsets
-        self.df   = (np.arange(self.nfft_1) - self.nfft_1/2)/(self.L) # frequency offsets
+        self.df   = (np.arange(self.nfft_1) - self.nfft_1/2)/(self.nfft_1*self.M*self.L) # frequency offsets
+
+        # estimates
+        self.rxy_max = 0
+        self.dt_hat  = 0
+        self.df_hat  = 0
 
     def __repr__(self,):
         '''object representation'''
@@ -87,8 +92,17 @@ class qpart:
         self.rxy = np.fft.ifft(self.B * np.conj(self.R), axis=1)
         # compute grid as transforms across time (scaled)
         self.grid = np.fft.fft(self.rxy, self.nfft_1, axis=0) / self.partitions
-        # scale 
-        return 0
+        # apply shift for convenience (plotting and extracting indices)
+        self.grid = np.fft.fftshift(self.grid)
+        # compute estimates
+        row,col = np.unravel_index(np.argmax(np.abs(self.grid),axis=None), self.grid.shape)
+        self.rxy_max = np.max(np.abs(self.grid))
+        self.df_hat  = self.df[row]
+        self.dt_hat  = self.lag[col]
+        #print('max grid', self.rxy_max, 'at dt =', self.dt_hat, ', df =', self.df_hat)
+        return self.rxy_max, self.dt_hat, self.df_hat
+
+    # the remainder of this class is purely for plotting
 
     def plot_partitions(self,output=None):
         '''plot partitions'''
@@ -159,18 +173,14 @@ class qpart:
     def plot_grid(self,output=None):
         '''plot full grid'''
         fig,ax = plt.subplots(1,figsize=(8,8))
-        grid= np.fft.fftshift(np.abs(self.grid))
-        row,col = np.unravel_index(np.argmax(grid,axis=None), grid.shape)
-        print('max grid', np.max(grid))
         my_cmap = plt.get_cmap('summer')
         #my_cmap.set_under('black')
-        ax.pcolormesh(self.lag,self.df,np.abs(grid),shading='auto',vmin=0,vmax=1,cmap=my_cmap)
+        ax.pcolormesh(self.lag,self.df,np.abs(self.grid),shading='auto',vmin=0,vmax=1,cmap=my_cmap)
         ax.set_xlabel('Lag [symbols]')
         ax.set_ylabel('Frequency Offset')
         ax.grid(True, which='minor')
-        # TODO: adjust plot values
         # add marker for maximum
-        ax.plot(self.lag[col], self.df[row], '.', color='black')
+        ax.plot(self.dt_hat, self.df_hat, '.', color='black')
         if output is not None:
             fig.savefig(output, dpi=200, bbox_inches='tight')
         else:
@@ -213,9 +223,9 @@ if __name__=='__main__':
     print('len(s)',len(s), 'input_len', det.input_len, 'num_blocks', num_blocks)
     for i in range(num_blocks):
         num = det.input_len
-        rxy_max = det.execute(s[(i*num):((i+1)*det.input_len)])
-        print(i)
+        rxy_max, dt_hat, df_hat = det.execute(s[(i*num):((i+1)*det.input_len)])
         if i==args.P:
+            print('max grid', rxy_max, 'at dt =', dt_hat, ', df =', df_hat)
             det.plot_rxy_stacked()
             det.plot_grid() #'grid.png')
 
