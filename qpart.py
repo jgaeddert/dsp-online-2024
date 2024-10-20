@@ -154,37 +154,6 @@ class qpart:
         else:
             plt.show()
 
-def plot_box(v:np.ndarray, x=None, y=None, output=None, labels=True,
-             marker=lambda x: np.abs(x)>0.9):
-    '''plot boxes'''
-    if x is None:
-        x = np.arange(v.shape[0])
-    if y is None:
-        y = np.arange(v.shape[1])
-    # scores as boxes
-    fig1, ax1 = plt.subplots(figsize=(10,10))
-    my_cmap = plt.cm.get_cmap('tab10')
-    my_cmap.set_under('black')
-    im = ax1.imshow(np.abs(v).T, vmin=0, vmax=1, cmap=my_cmap)
-    # add all tick marks...
-    ax1.set_xticks(np.arange(len(x)))
-    ax1.set_yticks(np.arange(len(y)))
-    # ... and label them with the respective list entries
-    ax1.set_xticklabels(x)
-    ax1.set_yticklabels(y)
-    # rotate the tick labels and set their alignment.
-    plt.setp(ax1.get_xticklabels(), rotation=45, ha="right",rotation_mode="anchor")
-    # loop over data dimensions and create text annotations.
-    for i in range(len(y)):
-        for j in range(len(x)):
-            if labels:
-                text = ax1.text(j, i, '%.2f\n%d' % (np.abs(v[j,i]), np.angle(v[j,i])*180/np.pi),ha="center", va="center", color="w")
-            # add marker if converged
-            #if marker(v[i,j]):
-            #    rect = patches.Rectangle((j-0.45,i-0.45),0.9,0.9,fill=False,edgecolor='gold',linewidth=1)
-            #    ax1.add_artist(rect)
-    plt.show()
-
 if __name__=='__main__':
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('-output',  default=None,          help='save output file instead of plotting')
