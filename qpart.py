@@ -67,40 +67,55 @@ class qpart:
         '''get the expected number of input samples'''
         return self.L * self.M
 
-    def plot_partitions(self,):
+    def plot_partitions(self,output=None):
         '''plot partitions'''
-        fig, (ax,ax2) = plt.subplots(2,figsize=(12,8))
+        fig, ax = plt.subplots(1,figsize=(12,4))
         tp = np.arange( (self.L+2*self.m)*self.M )/self.M - self.m
         for p in range(self.partitions):
             ax.plot(tp + p*self.L, np.real(self.signal_partitions[p,:]))
-        for p in range(self.partitions):
-            nfft = self.signal_partitions.shape[1]
-            f = np.arange(nfft)/nfft - 0.5
-            P = 20*np.log10(np.abs(np.fft.fftshift(np.fft.fft(self.signal_partitions[p],nfft))))
-            ax2.plot(f,P)
-        plt.show()
+        #for p in range(self.partitions):
+        #    nfft = self.signal_partitions.shape[1]
+        #    f = np.arange(nfft)/nfft - 0.5
+        #    P = 20*np.log10(np.abs(np.fft.fftshift(np.fft.fft(self.signal_partitions[p],nfft))))
+        #    ax2.plot(f,P)
+        # set figure properties
+        ax.set_xlabel('Time [symbols]')
+        ax.set_ylabel('Signal')
+        ax.set_xticks(np.arange(self.partitions+1)*self.L)
+        ax.set(xlim=(-self.m,self.num_symbols+self.m),ylim=(-1.8,1.8))
+        if output is not None:
+            fig.savefig(output, dpi=200, bbox_inches='tight')
+        else:
+            plt.show()
 
-    def plot_rxy(self,):
+    def plot_rxy(self,output=None):
         '''plot correlation output'''
-        '''
         fig, ax = plt.subplots(1,figsize=(12,4))
         txy = np.arange(self.nfft_0)/self.M - self.m
+        # plot real
         for p in range(self.partitions):
             r = np.roll(self.rxy[p,:],self.m * self.M)
-            ax.plot(txy + p*self.L, np.abs(r))
-        #ax.set_prop_cycle(None) # reset color cycler
-        #for p in range(self.partitions):
-        #    r = np.roll(rxy[p,:],self.m * self.M) / 215
-        #    ax.plot(txy + p*self.L, np.imag(r))
-        plt.show()
-        '''
-        plot_box(v=self.rxy.T/np.max(np.abs(self.rxy)), labels=False)
+            ax.plot(txy + p*self.L, np.real(r))
+        # plot imag + abs
+        ax.set_prop_cycle(None) # reset color cycler
+        for p in range(self.partitions):
+            r = np.roll(self.rxy[p,:],self.m * self.M)
+            ax.plot(txy + p*self.L, np.imag(r), '-', linewidth=0.5)
+        # set figure properties
+        ax.set_xlabel('Lag [symbols]')
+        ax.set_ylabel('Cross Correlation')
+        ax.set_xticks(np.arange(self.partitions+1)*self.L)
+        ax.set(xlim=(-self.m,self.num_symbols+self.m),ylim=(-1.1,1.1))
+        if output is not None:
+            fig.savefig(output, dpi=200, bbox_inches='tight')
+        else:
+            plt.show()
 
     def plot_grid(self,):
         '''plot full grid'''
         plot_box(v=self.grid/np.max(np.abs(self.grid)), labels=False)
 
-    def execute(self, buf: np.ndarray, plot=False):
+    def execute(self, buf: np.ndarray):
         '''push block of samples'''
         # validate input
         if buf.shape != (self.input_len,):
@@ -115,10 +130,6 @@ class qpart:
         self.rxy = np.fft.ifft(self.B * np.conj(self.R), axis=1)
         #print('rxy',rxy.shape)
         self.grid = np.fft.fft(self.rxy, self.nfft_1, axis=0)
-        if plot:
-            self.plot_rxy()
-            self.plot_grid()
-        print('grid',self.grid.shape)
         return 0
 
 def plot_box(v:np.ndarray, x=None, y=None, output=None, labels=True,
@@ -132,7 +143,7 @@ def plot_box(v:np.ndarray, x=None, y=None, output=None, labels=True,
     fig1, ax1 = plt.subplots(figsize=(10,10))
     my_cmap = plt.cm.get_cmap('tab10')
     my_cmap.set_under('black')
-    im = ax1.imshow(np.abs(v).T, vmin=0, vmax=1) # cmap=my_cmap) #, vmin=0.1)
+    im = ax1.imshow(np.abs(v).T, vmin=0, vmax=1, cmap=my_cmap)
     # add all tick marks...
     ax1.set_xticks(np.arange(len(x)))
     ax1.set_yticks(np.arange(len(y)))
@@ -156,7 +167,8 @@ if __name__=='__main__':
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('-output',  default=None,          help='save output file instead of plotting')
     p.add_argument('-N',       default=240, type=int, help='number of symbols')
-    p.add_argument('-P',       default=24,   type=int, help='number of partitions')
+    p.add_argument('-P',       default=8,   type=int, help='number of partitions')
+    p.add_argument('-interp',  default=2,   type=int, help='interpolation rate')
     p.add_argument('-plotcomp',action='store_true',   help='enable plotting composite sequence')
     p.add_argument('-plotsyms',action='store_true',   help='enable plotting symbols')
     p.add_argument('-plotimag',action='store_true',   help='enable plotting imaginary component')
@@ -165,9 +177,10 @@ if __name__=='__main__':
     p.add_argument('-plotcos', action='store_true',   help='enable plotting cosine of carrier offset')
     p.add_argument('-plotcor', action='store_true',   help='enable plotting cross-correlation')
     args = p.parse_args()
+    plt.style.use('seaborn-v0_8-darkgrid')
 
     # create detector object
-    det = qpart(num_symbols=args.N, partitions=args.P)
+    det = qpart(num_symbols=args.N, partitions=args.P, interp=args.interp)
     print(det)
     det.plot_partitions()
 
@@ -186,6 +199,7 @@ if __name__=='__main__':
     for i in range(num_blocks):
         num = det.input_len
         print(i)
-        rxy_max = det.execute(s[(i*num):((i+1)*det.input_len)], plot=(i==args.P))
-        #print(i, rxy_max)
+        rxy_max = det.execute(s[(i*num):((i+1)*det.input_len)])
+        if i==args.P:
+            det.plot_rxy()
 
