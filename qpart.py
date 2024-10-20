@@ -216,6 +216,7 @@ if __name__=='__main__':
     # add carrier offset
     s *= np.exp(2j*np.pi*args.fc*np.arange(n))
 
+    # add noise
     #s = np.arange(n)
 
     # operate in blocks...
@@ -228,4 +229,19 @@ if __name__=='__main__':
             print('max grid', rxy_max, 'at dt =', dt_hat, ', df =', df_hat)
             det.plot_rxy_stacked()
             det.plot_grid() #'grid.png')
+            break
+
+    # plot correlator output across partitions
+    lag  = 0
+    corr = det.rxy[:,lag]
+    tc   = np.arange(args.P)
+    fig, ax = plt.subplots(1,figsize=(12,4))
+    ax.plot(tc, np.real(corr), '-', linewidth=1.2, color='black')
+    ax.plot(tc, np.imag(corr), '-', linewidth=0.5, color='black')
+    for p in range(args.P):
+        ax.plot([tc[p], tc[p]], [np.real(corr[p]), np.imag(corr[p])], 'o')
+    ax.set_xlabel('Partition Index')
+    ax.set_ylabel(f'Correlation at Lag Index {lag}')
+    ax.set(xlim=(-0.25,args.P-0.75),ylim=(-1.2,1.2))
+    plt.show()
 
