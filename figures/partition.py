@@ -9,6 +9,7 @@ p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('-output',  default=None,          help='save output file instead of plotting')
 p.add_argument('-N',       default=240, type=int, help='number of symbols')
 p.add_argument('-P',       default=8,   type=int, help='number of partitions')
+p.add_argument('-xticks',  default=None,type=int, help='xticks spacing')
 p.add_argument('-plotcomp',action='store_true',   help='enable plotting composite sequence')
 p.add_argument('-plotsyms',action='store_true',   help='enable plotting symbols')
 p.add_argument('-plotimag',action='store_true',   help='enable plotting imaginary component')
@@ -81,13 +82,15 @@ ax.set_xlabel('Time [symbols]')
 ax.set_ylabel('Signal')
 ax.grid(True, zorder=5)
 ax.set(xlim=(-m,num_symbols+m),ylim=(-1.80,1.80))
+if args.xticks is not None:
+    ax.set_xticks(np.arange(args.P+1)*args.xticks)
 
 if args.plotsyms:
     ax.plot(t0, np.real(symbols), 'o', markersize=3, color='black')
 
 if args.plotcomp:
     '''plot composite signal by adding individual partitions together'''
-    ax.plot(t1, np.real(signal), '-', linewidth=0.7, color='black')
+    ax.plot(t1, np.real(signal), '-', linewidth=0.5, color='black')
 
 if args.plotcos:
     ax.plot(t1, np.real(phasor), ':', linewidth=0.5, color='black')
@@ -113,6 +116,8 @@ if args.plotcor:
     ax2.set_xlabel('Lag [symbols]')
     ax2.set_ylabel('Cross Correlation')
     ax2.set(xlim=(-m,num_symbols+m),ylim=(-1.1,1.1))
+    if args.xticks is not None:
+        ax2.set_xticks(np.arange(args.P+1)*args.xticks)
 
 if args.output is not None:
     fig.savefig(args.output, dpi=200, bbox_inches='tight')

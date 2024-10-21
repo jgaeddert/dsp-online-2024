@@ -12,6 +12,7 @@ p.add_argument('-R',       default=None,type=int, help='number of symbols that a
 p.add_argument('-xticks',  default=None,type=int, help='xticks spacing')
 p.add_argument('-plotsyms',action='store_true',   help='enable plotting symbols')
 p.add_argument('-nstd',    default=0, type=float, help='noise standard deviation')
+p.add_argument('-scale',   default=None, type=float, help='scale input?')
 p.add_argument('-fc',      default=0, type=float, help='noise standard deviation')
 p.add_argument('-plotcos', action='store_true',   help='enable plotting cosine of carrier offset')
 p.add_argument('-plotcor', action='store_true',   help='enable plotting cross-correlation')
@@ -42,6 +43,10 @@ samples = signal * phasor
 
 noise = rng.normal(0,args.nstd,2*num_samples).astype(np.single).view(np.csingle)
 samples += noise
+
+# scale input
+if args.scale is not None:
+    samples *= np.median(np.abs(samples)) if args.scale < 0 else args.scale
 
 # plot time series
 if args.plotcor:
