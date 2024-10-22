@@ -1,16 +1,14 @@
 #!/usr/bin/env python
 '''simple qpartition tests'''
-import argparse
-import liquid as dsp
 import numpy as np
-import qpart
 import pytest
+from qpartition import qpartition
 
 def harness_qpartition(num_symbols: int, partitions: int, interp: int, fc: float = 0,
                        dt: int = 0):
     '''basic qpartition testing'''
     # create detector object
-    det = qpart.qpart(num_symbols, partitions, interp)
+    det = qpartition(num_symbols, partitions, interp)
 
     # get clean signal and apply offsets
     s = det.sequence

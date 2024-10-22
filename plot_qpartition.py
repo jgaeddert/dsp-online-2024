@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 #import matplotlib.tri as tri
 import matplotlib.patches as patches
-import qpart
+from qpartition import qpartition
 
 if __name__=='__main__':
     p = argparse.ArgumentParser(description=__doc__)
@@ -22,7 +22,7 @@ if __name__=='__main__':
     plt.style.use('seaborn-v0_8-darkgrid')
 
     # create detector object
-    det = qpart.qpart(num_symbols=args.N, partitions=args.P, interp=args.interp)
+    det = qpartition(num_symbols=args.N, partitions=args.P, interp=args.interp)
     print(det)
     #det.plot_partitions()
 
