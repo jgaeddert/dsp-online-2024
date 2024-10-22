@@ -4,40 +4,51 @@ import argparse
 import liquid as dsp
 import numpy as np
 import matplotlib.pyplot as plt
-#import matplotlib.tri as tri
 import matplotlib.patches as patches
 
 class qpart:
+    '''partition-based detector'''
+    
     def __init__(self, num_symbols=240, partitions=12, interp=2, m=5, As=60., seed=12345):
+        '''initialize object
+
+            num_symbols : number of symbols to generate in the sequence
+            partitions  : number of partitions to divide the sequence
+            interp      : number of samples per symbol to interpolate sequence
+            m           : interpolator semi-length [symbols]
+            As          : interpolator stop-band suppression [dB]
+            seed        : random seed for generating sequences
+        '''
+        # validate input
+        if num_symbols % partitions:
+            raise BaseException(f'number of partitions must evenly divide number of symbols ({self.num_symbols})')
         self.num_symbols = num_symbols
         self.partitions  = partitions
         self.M = interp
         self.m = m
         self.L = self.num_symbols // self.partitions # symbols per partition
-        if self.L * self.partitions != self.num_symbols:
-            raise BaseException(f'number of partitions must evenly divide number of symbols ({self.num_symbols})')
 
         # generate sequence
         modmap = np.array((1,-1))
         rng    = np.random.default_rng(seed)
-        interp = dsp.firinterp(self.M, m, As)
 
         # generate random symbols and interpolate
         self.symbols = rng.choice(modmap,self.num_symbols).astype(np.csingle)
 
         # interpolate full signal
+        interp = dsp.firinterp(self.M, m, As) # interpolator
         self.signal = interp.execute(np.concatenate((self.symbols,np.zeros(2*self.m))))
 
         # group symbols into discrete partitions
         self.symbol_partitions = self.symbols.reshape((self.partitions,self.L))
 
-        # interpolate each partition
+        # interpolate each partition, accounting for delay
         self.signal_partitions = np.empty((self.partitions,(self.L+2*self.m)*self.M), dtype=np.csingle )
         for p in range(self.partitions):
             interp.reset()
             self.signal_partitions[p,:] = interp.execute(np.concatenate((self.symbol_partitions[p,:],np.zeros(2*self.m))))
 
-        # transform across partition
+        # pre-compute transforms across partition
         self.nfft_0 = max( 2*self.L*self.M, (self.L+2*self.m)*self.M )
         self.R = np.empty((self.partitions, self.nfft_0),dtype=np.csingle)
         for p in range(self.partitions):
@@ -110,12 +121,6 @@ class qpart:
         tp = np.arange( (self.L+2*self.m)*self.M )/self.M - self.m
         for p in range(self.partitions):
             ax.plot(tp + p*self.L, np.real(self.signal_partitions[p,:]))
-        #for p in range(self.partitions):
-        #    nfft = self.signal_partitions.shape[1]
-        #    f = np.arange(nfft)/nfft - 0.5
-        #    P = 20*np.log10(np.abs(np.fft.fftshift(np.fft.fft(self.signal_partitions[p],nfft))))
-        #    ax2.plot(f,P)
-        # set figure properties
         ax.set_xlabel('Time [symbols]')
         ax.set_ylabel('Signal')
         ax.set_xticks(np.arange(self.partitions+1)*self.L)

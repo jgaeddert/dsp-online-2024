@@ -1,3 +1,4 @@
 liquid-dsp==1.6.0
 matplotlib>=1.5
 numpy<2.0.0
+pytest
